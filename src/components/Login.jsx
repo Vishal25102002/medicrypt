@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -48,26 +49,43 @@ const LoginPage = () => {
       return;
     }
     setLoading(true);
-    // Instead of password validation, send the email and wallet address to your backend 
-    // to retrieve the user role and proper dashboard route.
-    setTimeout(() => {
-      // Dummy logic for demonstration. Replace with your API call.
-      if (email && walletAddress) {
+
+    try {
+      // Call your backend login API to verify the user's email and wallet address.
+      // The backend should return the user's role (e.g., 'patient', 'doctor', or 'researcher')
+      const response = await axios.post('your-backend-url/api/login', {
+        email,
+        walletAddress
+      });
+
+      if (response.data.success) {
+        // Save authentication status and userType locally (or via your state manager)
         localStorage.setItem('isAuthenticated', 'true');
-        // Assume backend returns userType based on email/wallet mapping
-        const userType = email.includes('doctor') ? 'doctor' : email.includes('researcher') ? 'researcher' : 'patient';
+        const userType = response.data.userType; // expected: 'patient', 'doctor', or 'researcher'
         localStorage.setItem('userType', userType);
-        switch(userType) {
-          case 'patient': navigate('/patient'); break;
-          case 'doctor': navigate('/doctor'); break;
-          case 'researcher': navigate('/researcher'); break;
-          default: navigate('/dashboard');
+
+        // Redirect user to the appropriate dashboard based on userType
+        switch (userType) {
+          case 'patient':
+            navigate('/patient');
+            break;
+          case 'doctor':
+            navigate('/doctor');
+            break;
+          case 'researcher':
+            navigate('/researcher');
+            break;
+          default:
+            navigate('/dashboard');
         }
       } else {
-        alert('Invalid email or wallet not connected.');
+        alert('Invalid login credentials. Please try again.');
       }
-      setLoading(false);
-    }, 1500);
+    } catch (err) {
+      console.error("Login error:", err);
+      alert('Login failed. Please try again.');
+    }
+    setLoading(false);
   };
 
   return (
@@ -83,9 +101,13 @@ const LoginPage = () => {
             <svg className="w-8 h-8 text-indigo-600" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">MediCrypt</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+              MediCrypt
+            </span>
           </Link>
-          <h2 className="mt-6 text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">Welcome Back</h2>
+          <h2 className="mt-6 text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+            Welcome Back
+          </h2>
           <p className="mt-2 text-gray-700">Sign in using your MetaMask wallet</p>
         </div>
 
@@ -98,7 +120,9 @@ const LoginPage = () => {
           <div className="p-8">
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">
+                  Email Address
+                </label>
                 <input
                   id="email"
                   type="email"
@@ -123,7 +147,9 @@ const LoginPage = () => {
                     <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M16.707 5.293a1 1 0 00-1.414 0L9 11.586 6.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l7-7a1 1 0 000-1.414z" />
                     </svg>
-                    <span className="text-sm text-green-600">MetaMask Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
+                    <span className="text-sm text-green-600">
+                      MetaMask Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -139,9 +165,7 @@ const LoginPage = () => {
             </form>
           </div>
           <div className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-gray-200 flex justify-between items-center">
-            <p className="text-sm text-gray-700">
-              Don't have an account?
-            </p>
+            <p className="text-sm text-gray-700">Don't have an account?</p>
             <Link to="/signup">
               <motion.button
                 whileHover={{ scale: 1.05 }}
