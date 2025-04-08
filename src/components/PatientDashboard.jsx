@@ -1,27 +1,142 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+import "../App.css"
 
-const PatientDashboard = ({ userData, isDarkMode, walletConnected }) => {
-  // Sample data
-  const [medicalRecords] = useState([
-    { id: 1, type: 'Lab Test', date: '2023-05-10', provider: 'City Lab Services', status: 'Verified', result: 'Normal', hash: '0x7f9e8d7c6b5a4' },
-    { id: 2, type: 'X-Ray', date: '2023-04-15', provider: 'Central Hospital', status: 'Verified', result: 'Normal', hash: '0x3d2c1b0a9f8e' },
-    { id: 3, type: 'Vaccination', date: '2023-03-20', provider: 'Community Health', status: 'Verified', result: 'Completed', hash: '0x5f4e3d2c1b0a' },
-  ]);
-  
-  const [appointments] = useState([
-    { id: 1, doctor: 'Dr. Sarah Johnson', specialty: 'Cardiology', date: '2023-06-15', time: '10:00 AM', status: 'Confirmed' },
-    { id: 2, doctor: 'Dr. Robert Chen', specialty: 'Dermatology', date: '2023-06-28', time: '2:30 PM', status: 'Pending' },
-  ]);
-  
-  const [prescriptions] = useState([
-    { id: 1, medication: 'Amoxicillin', dosage: '500mg', frequency: 'Twice daily', dateIssued: '2023-05-05', endDate: '2023-05-15', doctor: 'Dr. Sarah Johnson', refills: 0 },
-    { id: 2, medication: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', dateIssued: '2023-04-20', endDate: '2023-07-20', doctor: 'Dr. Michael Brown', refills: 2 },
-  ]);
-  
-  const [accessRequests] = useState([
-    { id: 1, doctor: 'Dr. Emily Wilson', organization: 'Central Hospital', date: '2023-05-25', status: 'Pending' },
-  ]);
+const PatientDashboard = ({ userData }) => {
+  // State for data
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [accessRequests, setAccessRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [bloodTestData, setBloodTestData] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // API endpoint
+  const API_ENDPOINT = 'https://api.your-blockchain-service.com/v1';
+
+  // Fetch data from blockchain
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // For now using mock data
+        setUserProfile({
+          firstName: userData?.firstName || 'John',
+          lastName: userData?.lastName || 'Doe',
+          email: userData?.email || 'john.doe@example.com',
+          userType: 'patient',
+          // This is just a placeholder. See note below regarding "correctness."
+          walletAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+          joinDate: '2024-06-15',
+          lastLogin: '2025-04-07',
+          dataConsent: true
+        });
+
+        setMedicalRecords([
+          { id: 1, type: 'Lab Test', date: '2023-05-10', provider: 'City Lab Services', status: 'Verified', result: 'Normal', hash: '0x7f9e8d7c6b5a4' },
+          { id: 2, type: 'X-Ray', date: '2023-04-15', provider: 'Central Hospital', status: 'Verified', result: 'Normal', hash: '0x3d2c1b0a9f8e' },
+          { id: 3, type: 'Vaccination', date: '2023-03-20', provider: 'Community Health', status: 'Verified', result: 'Completed', hash: '0x5f4e3d2c1b0a' },
+        ]);
+
+        setAppointments([
+          { id: 1, doctor: 'Dr. Sarah Johnson', specialty: 'Cardiology', date: '2023-06-15', time: '10:00 AM', status: 'Confirmed' },
+          { id: 2, doctor: 'Dr. Robert Chen', specialty: 'Dermatology', date: '2023-06-28', time: '2:30 PM', status: 'Pending' },
+        ]);
+
+        setPrescriptions([
+          { id: 1, medication: 'Amoxicillin', dosage: '500mg', frequency: 'Twice daily', dateIssued: '2023-05-05', endDate: '2023-05-15', doctor: 'Dr. Sarah Johnson', refills: 0 },
+          { id: 2, medication: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', dateIssued: '2023-04-20', endDate: '2023-07-20', doctor: 'Dr. Michael Brown', refills: 2 },
+        ]);
+
+        // The 'status' field can change among 'Pending', 'Approved', 'Denied', 'Revoked', etc.
+        setAccessRequests([
+          { id: 1, doctor: 'Dr. Emily Wilson', organization: 'Central Hospital', date: '2023-05-25', status: 'Pending' },
+        ]);
+
+        setBloodTestData([
+          {
+            "patient_id": "patient123",
+            "name": "John Doe",
+            "blood_test_date": "2025-03-01",
+            "glucose_level": 120,
+            "cholesterol_level": 180,
+            "diagnosis": "Normal, monitor glucose"
+          },
+          {
+            "patient_id": "patient789",
+            "name": "Alice Brown",
+            "blood_test_date": "2025-01-10",
+            "glucose_level": 90,
+            "cholesterol_level": 160,
+            "diagnosis": "Healthy"
+          },
+          {
+            "patient_id": "hero123",
+            "name": "Jane Smith",
+            "blood_test_date": "2025-02-15",
+            "glucose_level": 150,
+            "cholesterol_level": 200,
+            "diagnosis": "Pre-diabetic, recommend diet change"
+          }
+        ]);
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to fetch your medical data. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userData?.id]);
+
+
+  const revertRequestToPending = (requestId) => {
+    setAccessRequests((prevRequests) =>
+      prevRequests.map((req) =>
+        req.id === requestId ? { ...req, status: 'Pending' } : req
+      )
+    );
+  };
+
+  // Function to approve access request
+  const handleApproveAccess = async (requestId) => {
+    try {
+      // API call would go here
+      setAccessRequests(prevRequests =>
+        prevRequests.map(req =>
+          req.id === requestId ? { ...req, status: 'Approved' } : req
+        )
+      );
+    } catch (error) {
+      console.error('Error approving access:', error);
+      alert('Failed to approve access request. Please try again later.');
+    }
+  };
+
+
+  const handleDenyAccess = async (requestId) => {
+    try {
+      // API call would go here
+      setAccessRequests(prevRequests =>
+        prevRequests.map(req =>
+          req.id === requestId
+            ? req.status === 'Approved'
+              ? { ...req, status: 'Revoked' }
+              : { ...req, status: 'Denied' }
+            : req
+        )
+      );
+    } catch (error) {
+      console.error('Error denying/revoking access:', error);
+      alert('Failed to deny/revoke access request. Please try again later.');
+    }
+  };
 
   // Animation variants
   const containerVariants = {
@@ -43,364 +158,1200 @@ const PatientDashboard = ({ userData, isDarkMode, walletConnected }) => {
     }
   };
 
-  // Render a card with a title and children
-  const Card = ({ title, children, className = '', actionText, actionClick }) => (
-    <motion.div
-      variants={itemVariants}
-      className={`rounded-xl shadow-md overflow-hidden ${
-        isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'
-      } ${className}`}
-    >
-      <div className={`px-6 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
-        <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{title}</h3>
-        {actionText && (
-          <button
-            onClick={actionClick}
-            className={`text-sm font-medium ${
-              isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-800'
-            }`}
-          >
-            {actionText}
-          </button>
-        )}
+  // Truncate wallet address
+  const truncateAddress = (address) => {
+    if (!address) return '';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="relative w-24 h-24">
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-200"></div>
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-indigo-600 text-sm font-medium">Loading</div>
+        </div>
       </div>
-      <div className="p-6">
-        {children}
-      </div>
-    </motion.div>
-  );
+    );
+  }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      {/* Welcome Banner */}
-      <motion.div 
-        variants={itemVariants}
-        className={`rounded-xl shadow-md overflow-hidden ${
-          isDarkMode 
-            ? 'bg-gradient-to-r from-indigo-800 to-purple-900' 
-            : 'bg-gradient-to-r from-indigo-600 to-purple-600'
-        }`}
-      >
-        <div className="px-6 py-8 sm:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div>
-              <div className="text-sm text-indigo-200 mb-2">Welcome back,</div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white">{userData?.firstName} {userData?.lastName}</h2>
-              <p className="mt-2 text-indigo-200">Your medical data is secure and accessible</p>
+    <div className="w-full min-h-screen bg-gray-50 flex flex-col">
+      {/* Header with profile */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-[1536px] mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+              M
             </div>
-            <div className="mt-4 sm:mt-0">
-              {walletConnected ? (
-                <div className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg text-white">
-                  <div className="text-xs opacity-80">Blockchain Verified</div>
-                  <div className="flex items-center mt-1">
-                    <div className="h-2 w-2 rounded-full bg-green-400 mr-2"></div>
-                    <span className="text-sm">Connected & Secured</span>
-                  </div>
-                </div>
-              ) : (
-                <button className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg text-white border border-white/20 hover:bg-white/20 transition">
-                  Connect Wallet
-                </button>
-              )}
-            </div>
+            <span className="text-lg font-medium text-gray-900">MediCrypt</span>
           </div>
-          
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 rounded-md bg-white/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <div className="text-xs text-indigo-200">Medical Records</div>
-                  <div className="text-lg font-semibold text-white">{medicalRecords.length}</div>
-                </div>
-              </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-1 bg-indigo-50 px-3 py-1.5 rounded-full text-xs text-indigo-700">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" />
+              </svg>
+              <span>{truncateAddress(userProfile?.walletAddress)}</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 rounded-md bg-white/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <div className="text-xs text-indigo-200">Upcoming Appointments</div>
-                  <div className="text-lg font-semibold text-white">{appointments.filter(a => a.status === 'Confirmed').length}</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="p-2 rounded-md bg-white/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <div className="text-xs text-indigo-200">Active Prescriptions</div>
-                  <div className="text-lg font-semibold text-white">{prescriptions.length}</div>
-                </div>
-              </div>
+
+            <div className="relative">
+              <button className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
+                <span className="text-indigo-700 font-medium text-sm">
+                  {userProfile?.firstName?.charAt(0)}
+                  {userProfile?.lastName?.charAt(0)}
+                </span>
+              </button>
             </div>
           </div>
         </div>
-      </motion.div>
-      
-      {/* Two Column Layout for Desktop, Single Column for Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Medical Records */}
-          <Card 
-            title="Recent Medical Records" 
-            actionText="View All"
-            actionClick={() => console.log('View all records')}
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-[1536px] w-full mx-auto px-4 py-6">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          {/* Welcome Card */}
+          <motion.div
+            variants={itemVariants}
+            className="bg-white rounded-2xl shadow-sm overflow-hidden"
           >
-            {medicalRecords.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                  <thead>
-                    <tr>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Type</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Date</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Provider</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Status</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                    {medicalRecords.map((record) => (
-                      <tr key={record.id}>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{record.type}</td>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{record.date}</td>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{record.provider}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {record.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          <button className={`mr-2 ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-800'}`}>
-                            View
-                          </button>
-                          <button className={`mr-2 ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-800'}`}>
-                            Share
-                          </button>
-                        </td>
-                      </tr>
+            <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white opacity-10"></div>
+                <div className="absolute right-16 bottom-0 w-16 h-16 rounded-full bg-white opacity-10"></div>
+                <div className="absolute left-16 -bottom-4 w-24 h-24 rounded-full bg-white opacity-10"></div>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 rounded-full bg-indigo-100 border-4 border-white shadow-md -mt-12 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                  {userProfile?.firstName?.charAt(0)}
+                  {userProfile?.lastName?.charAt(0)}
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    Welcome, {userProfile?.firstName} {userProfile?.lastName}
+                  </h1>
+                  <p className="text-sm text-gray-500">
+                    Your health data is secure on the blockchain
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center space-x-2 bg-indigo-50 px-3 py-2 rounded-lg text-xs text-indigo-700">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" />
+                  </svg>
+                  <span className="font-medium">
+                    {truncateAddress(userProfile?.walletAddress)}
+                  </span>
+                  <button
+                    className="text-indigo-600 hover:text-indigo-800"
+                    onClick={() => {
+                      navigator.clipboard.writeText(userProfile?.walletAddress);
+                      alert('Wallet address copied to clipboard!');
+                    }}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex items-center space-x-1 bg-green-50 px-3 py-2 rounded-lg text-xs text-green-700">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>Blockchain Verified</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Navigation Tabs */}
+          <div className="bg-white rounded-xl shadow-sm p-1 flex overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition ${
+                activeTab === 'overview'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : 'text-gray-600 hover:text-indigo-600'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('records')}
+              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition ${
+                activeTab === 'records'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : 'text-gray-600 hover:text-indigo-600'
+              }`}
+            >
+              Medical Records
+            </button>
+            <button
+              onClick={() => setActiveTab('appointments')}
+              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition ${
+                activeTab === 'appointments'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : 'text-gray-600 hover:text-indigo-600'
+              }`}
+            >
+              Appointments
+            </button>
+            <button
+              onClick={() => setActiveTab('sharing')}
+              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition ${
+                activeTab === 'sharing'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : 'text-gray-600 hover:text-indigo-600'
+              }`}
+            >
+              Data Sharing
+            </button>
+          </div>
+
+          {/* Stats Cards (shown in Overview tab) */}
+          {activeTab === 'overview' && (
+            <motion.div
+              variants={itemVariants}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            >
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Medical Records</div>
+                    <div className="text-xl font-semibold text-gray-900">
+                      {medicalRecords.length}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Appointments</div>
+                    <div className="text-xl font-semibold text-gray-900">
+                      {
+                        appointments.filter((a) => a.status === 'Confirmed')
+                          .length
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Prescriptions</div>
+                    <div className="text-xl font-semibold text-gray-900">
+                      {prescriptions.length}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Access Requests</div>
+                    <div className="text-xl font-semibold text-gray-900">
+                      {accessRequests.length}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column */}
+            {(activeTab === 'overview' || activeTab === 'records') && (
+              <div
+                className={`space-y-6 ${
+                  activeTab === 'overview' ? 'lg:col-span-2' : 'lg:col-span-3'
+                }`}
+              >
+                {/* Recent Medical Records */}
+                <motion.div
+                  variants={itemVariants}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden"
+                >
+                  <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-medium text-gray-900">
+                      Recent Medical Records
+                    </h3>
+                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Type
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Date
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Provider
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Status
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {medicalRecords.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {record.type}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.date}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.provider}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-green-100 text-green-800">
+                                {record.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button className="text-indigo-600 hover:text-indigo-900 mr-3">
+                                View
+                              </button>
+                              <button className="text-indigo-600 hover:text-indigo-900">
+                                Share
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+
+                {/* Blood Tests (only in Records tab) */}
+                {activeTab === 'records' && (
+                  <motion.div
+                    variants={itemVariants}
+                    className="bg-white rounded-xl shadow-sm overflow-hidden"
+                  >
+                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-medium text-gray-900">
+                        Blood Test Results
+                      </h3>
+                      <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                        View All
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Date
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Glucose
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Cholesterol
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Diagnosis
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {bloodTestData.map((test, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {test.blood_test_date}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
+                                    test.glucose_level > 140
+                                      ? 'bg-red-100 text-red-800'
+                                      : test.glucose_level > 100
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}
+                                >
+                                  {test.glucose_level} mg/dL
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
+                                    test.cholesterol_level > 200
+                                      ? 'bg-red-100 text-red-800'
+                                      : test.cholesterol_level > 180
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}
+                                >
+                                  {test.cholesterol_level} mg/dL
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {test.diagnosis}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button className="text-indigo-600 hover:text-indigo-900 mr-3">
+                                  Details
+                                </button>
+                                <button className="text-indigo-600 hover:text-indigo-900">
+                                  Share
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Upcoming Appointments (in Overview or Appointments tab) */}
+                {(activeTab === 'overview' || activeTab === 'appointments') && (
+                  <motion.div
+                    variants={itemVariants}
+                    className="bg-white rounded-xl shadow-sm overflow-hidden"
+                  >
+                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-medium text-gray-900">
+                        Upcoming Appointments
+                      </h3>
+                      <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                        Schedule New
+                      </button>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                      {appointments.map((appointment) => (
+                        <div
+                          key={appointment.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-start space-x-4">
+                            <div
+                              className={`p-2 rounded-lg ${
+                                appointment.status === 'Confirmed'
+                                  ? 'bg-green-100 text-green-600'
+                                  : 'bg-yellow-100 text-yellow-600'
+                              }`}
+                            >
+                              <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {appointment.doctor}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {appointment.specialty}
+                              </p>
+                              <div className="mt-1 flex items-center text-xs text-gray-500">
+                                <span>
+                                  {appointment.date} • {appointment.time}
+                                </span>
+                                <span className="mx-2">•</span>
+                                <span
+                                  className={`px-2 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full ${
+                                    appointment.status === 'Confirmed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}
+                                >
+                                  {appointment.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 sm:mt-0 flex space-x-2">
+                            <button className="px-3 py-1 text-xs font-medium rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                              Reschedule
+                            </button>
+                            <button className="px-3 py-1 text-xs font-medium rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {/* Right Column - only in Overview */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Access Requests Card */}
+                <motion.div
+                  variants={itemVariants}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden"
+                >
+                  <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-medium text-gray-900">Access Requests</h3>
+                    {accessRequests.length > 0 && (
+                      <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                        Manage All
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-6">
+                    {accessRequests.length > 0 ? (
+                      <div className="space-y-4">
+                        {accessRequests.map((request) => (
+                          <div
+                            key={request.id}
+                            className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {request.doctor}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {request.organization}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Requested on: {request.date}
+                                </p>
+                              </div>
+                              <span
+                                className={`px-2 py-1 text-xs rounded-full ${
+                                  request.status === 'Approved'
+                                    ? 'bg-green-100 text-green-800'
+                                    : request.status === 'Revoked'
+                                    ? 'bg-red-100 text-red-800'
+                                    : request.status === 'Denied'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}
+                              >
+                                {request.status}
+                              </span>
+                            </div>
+
+                            {/* If the request is Pending, show Approve / Deny */}
+                            {request.status === 'Pending' && (
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button
+                                  onClick={() => handleApproveAccess(request.id)}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleDenyAccess(request.id)}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Deny
+                                </button>
+                              </div>
+                            )}
+
+                            {/* If the request was Approved, show Revoke */}
+                            {request.status === 'Approved' && (
+                              <div className="mt-4">
+                                <button
+                                  onClick={() => handleDenyAccess(request.id)}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Revoke Access
+                                </button>
+                              </div>
+                            )}
+
+                            {/* If the request was Denied or Revoked, allow user to revert to pending */}
+                            {(request.status === 'Denied' ||
+                              request.status === 'Revoked') && (
+                              <div className="mt-4">
+                                <button
+                                  onClick={() => revertRequestToPending(request.id)}
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white"
+                                >
+                                  Revert to Pending
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                          <svg
+                            className="w-8 h-8"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            />
+                          </svg>
+                        </div>
+                        <p className="mt-3 text-sm text-gray-500">
+                          No pending access requests
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Prescriptions Card */}
+                <motion.div
+                  variants={itemVariants}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden"
+                >
+                  <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-medium text-gray-900">
+                      Active Prescriptions
+                    </h3>
+                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    {prescriptions.map((prescription) => (
+                      <div
+                        key={prescription.id}
+                        className="p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {prescription.medication}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {prescription.dosage} - {prescription.frequency}
+                            </p>
+                            <div className="mt-1 text-xs text-gray-500">
+                              <span>
+                                Prescribed by: {prescription.doctor}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center text-xs text-gray-500">
+                              <span>Valid until: {prescription.endDate}</span>
+                              <span className="mx-2">•</span>
+                              <span>Refills: {prescription.refills}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>No medical records found.</p>
+                  </div>
+                </motion.div>
               </div>
             )}
-          </Card>
-          
-          {/* Appointments */}
-          <Card 
-            title="Upcoming Appointments" 
-            actionText="Schedule New"
-            actionClick={() => console.log('Schedule new appointment')}
-          >
-            {appointments.length > 0 ? (
-              <div className="space-y-4">
-                {appointments.map((appointment) => (
-                  <div 
-                    key={appointment.id} 
-                    className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-lg ${
-                      isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start">
-                      <div className={`p-2 rounded-md ${
-                        appointment.status === 'Confirmed' 
-                          ? 'bg-green-400 bg-opacity-20 text-green-500' 
-                          : 'bg-yellow-400 bg-opacity-20 text-yellow-500'
-                      }`}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{appointment.doctor}</p>
-                        <p className="text-xs text-gray-500">{appointment.specialty}</p>
-                        <div className="mt-1 flex items-center text-xs text-gray-500">
-                          <span>{appointment.date} at {appointment.time}</span>
-                          <span className="mx-2">•</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                            appointment.status === 'Confirmed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {appointment.status}
-                          </span>
+
+            {/* Data Sharing Tab */}
+            {activeTab === 'sharing' && (
+              <motion.div
+                variants={itemVariants}
+                className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
+                {/* Access Management Card */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="font-medium text-gray-900">
+                      Access Management
+                    </h3>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className="bg-indigo-50 p-4 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <div className="p-2 bg-indigo-100 rounded-md text-indigo-600">
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-indigo-900">
+                            Access Control
+                          </p>
+                          <p className="mt-1 text-xs text-indigo-700">
+                            You can control who has access to your medical
+                            records. Approved healthcare providers can view your
+                            records securely via the blockchain.
+                          </p>
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 sm:mt-0 flex space-x-2 ml-0 sm:ml-4">
-                      <button className={`px-3 py-1 text-xs rounded-md ${
-                        isDarkMode 
-                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                      }`}>
-                        Reschedule
-                      </button>
-                      <button className={`px-3 py-1 text-xs rounded-md ${
-                        isDarkMode 
-                          ? 'bg-red-500 bg-opacity-30 hover:bg-opacity-40 text-red-300' 
-                          : 'bg-red-100 hover:bg-red-200 text-red-700'
-                      }`}>
-                        Cancel
-                      </button>
-                    </div>
+
+                    {/* Access Requests List */}
+                    <h4 className="font-medium text-gray-700 text-sm mt-6 mb-3">
+                      Pending Access Requests
+                    </h4>
+                    {accessRequests.filter((req) => req.status === 'Pending')
+                      .length > 0 ? (
+                      <div className="space-y-3">
+                        {accessRequests
+                          .filter((req) => req.status === 'Pending')
+                          .map((request) => (
+                            <div
+                              key={request.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 rounded-full bg-yellow-100 text-yellow-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {request.doctor}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {request.organization}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() =>
+                                    handleApproveAccess(request.id)
+                                  }
+                                  className="px-3 py-1 text-xs font-medium rounded-lg hover:bg-green-700 "
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleDenyAccess(request.id)}
+                                  className="px-3 py-1 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Deny
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">
+                        No pending requests
+                      </p>
+                    )}
+
+                    {/* Approved Access List */}
+                    <h4 className="font-medium text-gray-700 text-sm mt-6 mb-3">
+                      Approved Access
+                    </h4>
+                    {accessRequests.filter((req) => req.status === 'Approved')
+                      .length > 0 ? (
+                      <div className="space-y-3">
+                        {accessRequests
+                          .filter((req) => req.status === 'Approved')
+                          .map((request) => (
+                            <div
+                              key={request.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 rounded-full bg-green-100 text-green-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {request.doctor}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {request.organization}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleDenyAccess(request.id)}
+                                className="px-3 py-1 text-xs font-medium rounded-lg bg-red-50 0 border border-red-200 text-red-600 hover:bg-red-100 btn-permission"
+                              >
+                                Revoke
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">
+                        No approved access
+                      </p>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>No upcoming appointments.</p>
-              </div>
-            )}
-          </Card>
-        </div>
-        
-        <div className="space-y-6">
-          {/* Access Control */}
-          <Card 
-            title="Access Requests" 
-            actionText={accessRequests.length > 0 ? "Manage All" : ""}
-            actionClick={accessRequests.length > 0 ? () => console.log('Manage all access requests') : undefined}
-          >
-            {accessRequests.length > 0 ? (
-              <div className="space-y-4">
-                {accessRequests.map((request) => (
-                  <div 
-                    key={request.id} 
-                    className={`p-4 rounded-lg ${
-                      isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
+                </div>
+
+                {/* Privacy Settings Card */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="font-medium text-gray-900">Privacy Settings</h3>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Data Sharing Status
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Allow doctors to request access to your records
+                          </p>
+                        </div>
+                        <div className="relative inline-block w-12 h-6 align-middle">
+                          <input
+                            type="checkbox"
+                            name="dataSharingToggle"
+                            id="dataSharingToggle"
+                            className="sr-only peer"
+                            defaultChecked={userProfile?.dataConsent || true}
+                          />
+                          <label
+                            htmlFor="dataSharingToggle"
+                            className="block h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300 peer-checked:bg-indigo-600"
+                          ></label>
+                          <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 peer-checked:translate-x-6"></span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Anonymous Research
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Contribute anonymized data to medical research
+                          </p>
+                        </div>
+                        <div className="relative inline-block w-12 h-6 align-middle">
+                          <input
+                            type="checkbox"
+                            name="anonymousDataToggle"
+                            id="anonymousDataToggle"
+                            className="sr-only peer"
+                          />
+                          <label
+                            htmlFor="anonymousDataToggle"
+                            className="block h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300 peer-checked:bg-indigo-600"
+                          ></label>
+                          <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 peer-checked:translate-x-6"></span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Email Notifications
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Receive email alerts for new access requests
+                          </p>
+                        </div>
+                        <div className="relative inline-block w-12 h-6 align-middle">
+                          <input
+                            type="checkbox"
+                            name="emailNotificationToggle"
+                            id="emailNotificationToggle"
+                            className="sr-only peer"
+                            defaultChecked={true}
+                          />
+                          <label
+                            htmlFor="emailNotificationToggle"
+                            className="block h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300 peer-checked:bg-indigo-600"
+                          ></label>
+                          <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 peer-checked:translate-x-6"></span>
+                        </div>
+                      </div>
+
+                      <hr className="border-gray-200" />
+
                       <div>
-                        <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{request.doctor}</p>
-                        <p className="text-xs text-gray-500">{request.organization}</p>
-                        <p className="text-xs text-gray-500 mt-1">Requested on: {request.date}</p>
+                        <h4 className="text-sm font-medium text-gray-900 mb-3">
+                          Data Privacy Audit Log
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-700">
+                            <span className="text-gray-400">
+                              2025-04-05 12:34 PM:
+                            </span>{' '}
+                            Data sharing settings updated
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-700">
+                            <span className="text-gray-400">
+                              2025-04-02 10:15 AM:
+                            </span>{' '}
+                            Access granted to Dr. Emily Wilson
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-700">
+                            <span className="text-gray-400">
+                              2025-03-28 03:22 PM:
+                            </span>{' '}
+                            Privacy policy acceptance
+                          </div>
+                        </div>
                       </div>
-                      <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                        {request.status}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex space-x-2">
-                      <button className="w-full px-3 py-2 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white">
-                        Approve
-                      </button>
-                      <button className={`w-full px-3 py-2 text-xs font-medium rounded-md ${
-                        isDarkMode 
-                          ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                      }`}>
-                        Deny
-                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>No pending access requests.</p>
-              </div>
+                </div>
+
+                {/* Blockchain Verification Card */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="font-medium text-gray-900">
+                      Blockchain Transaction History
+                    </h3>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Transaction Hash
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Date
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Type
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {medicalRecords.map((record) => (
+                          <tr
+                            key={`tx-${record.id}`}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-indigo-600">
+                              <a
+                                href={`https://etherscan.io/tx/${record.hash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:underline"
+                              >
+                                {record.hash}
+                              </a>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.date}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              Record {record.type} Verification
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-green-100 text-green-800">
+                                Confirmed
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </Card>
-          
-          {/* Active Prescriptions */}
-          <Card 
-            title="Active Prescriptions" 
-            actionText="View All"
-            actionClick={() => console.log('View all prescriptions')}
+          </div>
+        </motion.div>
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 z-10">
+        <div className="flex justify-around">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`p-2 flex flex-col items-center text-xs ${
+              activeTab === 'overview' ? 'text-indigo-600' : 'text-gray-600'
+            }`}
           >
-            {prescriptions.length > 0 ? (
-              <div className="space-y-4">
-                {prescriptions.map((prescription) => (
-                  <div 
-                    key={prescription.id} 
-                    className={`p-4 rounded-lg ${
-                      isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start">
-                      <div className="p-2 rounded-md bg-blue-100 text-blue-600">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{prescription.medication}</p>
-                        <p className="text-xs text-gray-500">{prescription.dosage} - {prescription.frequency}</p>
-                        <div className="mt-1 flex items-center text-xs text-gray-500">
-                          <span>Prescribed by: {prescription.doctor}</span>
-                        </div>
-                        <div className="mt-1 flex items-center text-xs text-gray-500">
-                          <span>Valid until: {prescription.endDate}</span>
-                          <span className="mx-2">•</span>
-                          <span>Refills: {prescription.refills}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>No active prescriptions.</p>
-              </div>
-            )}
-          </Card>
-          
-          {/* Blockchain Security Status */}
-          <Card title="Blockchain Security">
-            <div className="text-center">
-              <div className={`inline-block p-4 rounded-full ${
-                walletConnected
-                  ? 'bg-green-100 text-green-600'
-                  : isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-              }`}>
-                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {walletConnected ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  )}
-                </svg>
-              </div>
-              <h4 className={`mt-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {walletConnected ? 'Your data is blockchain secured' : 'Connect your wallet for enhanced security'}
-              </h4>
-              <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {walletConnected 
-                  ? 'Your medical records are secured and verified on the blockchain network, ensuring data integrity and privacy.' 
-                  : 'Link your MetaMask wallet to secure and verify your medical records on the blockchain.'}
-              </p>
-              {!walletConnected && (
-                <button className="mt-4 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium">
-                  Connect Wallet
-                </button>
-              )}
-            </div>
-          </Card>
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 12l2-2m0 0l7-7 7 7m-14 0l2 2m0 0l7 7 7-7m-14 0l2-2"
+              />
+            </svg>
+            <span>Overview</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('records')}
+            className={`p-2 flex flex-col items-center text-xs ${
+              activeTab === 'records' ? 'text-indigo-600' : 'text-gray-600'
+            }`}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span>Records</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('appointments')}
+            className={`p-2 flex flex-col items-center text-xs ${
+              activeTab === 'appointments' ? 'text-indigo-600' : 'text-gray-600'
+            }`}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            <span>Appointments</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('sharing')}
+            className={`p-2 flex flex-col items-center text-xs ${
+              activeTab === 'sharing' ? 'text-indigo-600' : 'text-gray-600'
+            }`}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            <span>Sharing</span>
+          </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

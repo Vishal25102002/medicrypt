@@ -5,7 +5,6 @@ import axios from 'axios';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,17 +50,15 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Call your backend login API to verify the user's email and wallet address.
-      // The backend should return the user's role (e.g., 'patient', 'doctor', or 'researcher')
+      // Call your backend login API to verify the wallet address only
       const response = await axios.post('your-backend-url/api/login', {
-        email,
         walletAddress
       });
 
       if (response.data.success) {
-        // Save authentication status and userType locally (or via your state manager)
+        // Save authentication status and userType locally
         localStorage.setItem('isAuthenticated', 'true');
-        const userType = response.data.userType; // expected: 'patient', 'doctor', or 'researcher'
+        const userType = response.data.userType;
         localStorage.setItem('userType', userType);
 
         // Redirect user to the appropriate dashboard based on userType
@@ -79,7 +76,7 @@ const LoginPage = () => {
             navigate('/dashboard');
         }
       } else {
-        alert('Invalid login credentials. Please try again.');
+        alert('Invalid wallet address. Please try again.');
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -88,94 +85,204 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.2,
+        delayChildren: 0.3
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100 }
+    }
+  };
+
+  const floatingAnimation = {
+    y: ["-5px", "5px"],
+    transition: {
+      y: {
+        duration: 2,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen w-screen max-w-full bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 flex flex-col justify-center items-center p-4 md:p-8">
+    <div className="min-h-screen w-screen max-w-full bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 flex flex-col justify-center items-center p-4 md:p-8 overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-gradient-to-r from-indigo-300/20 to-purple-300/20"
+            style={{
+              width: `${Math.random() * 300 + 50}px`,
+              height: `${Math.random() * 300 + 50}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              x: [0, Math.random() * 100 - 50],
+              y: [0, Math.random() * 100 - 50],
+              scale: [1, Math.random() * 0.5 + 0.8],
+            }}
+            transition={{
+              duration: Math.random() * 10 + 15,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md relative z-10"
       >
-        <div className="text-center mb-8">
+        <motion.div variants={itemVariants} className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
-            <svg className="w-8 h-8 text-indigo-600" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+            <motion.div animate={floatingAnimation}>
+              <svg className="w-10 h-10 text-indigo-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            </motion.div>
+            <motion.span 
+              className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text"
+              animate={{ 
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+              }}
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity,
+                ease: "linear" 
+              }}
+              style={{ backgroundSize: "200% auto" }}
+            >
               MediCrypt
-            </span>
+            </motion.span>
           </Link>
-          <h2 className="mt-6 text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
+          <motion.h2 
+            variants={itemVariants}
+            className="mt-6 text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text"
+          >
             Welcome Back
-          </h2>
-          <p className="mt-2 text-gray-700">Sign in using your MetaMask wallet</p>
-        </div>
+          </motion.h2>
+          <motion.p variants={itemVariants} className="mt-2 text-gray-700">
+            Sign in using your MetaMask wallet
+          </motion.p>
+        </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+          variants={itemVariants}
+          className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-indigo-100"
         >
           <div className="p-8">
             <form onSubmit={handleSubmit}>
-              <div className="mb-6">
-                <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@medicrypt.com"
-                  className="w-full p-3 rounded-full border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-              <div className="mb-6">
+              <motion.div 
+                className="flex flex-col items-center justify-center mb-8"
+                variants={itemVariants}
+              >
+                <motion.div 
+                  className="w-24 h-24 mb-6 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                >
+                  <svg className="w-12 h-12 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </motion.div>
+                
                 {!walletConnected ? (
-                  <button
+                  <motion.button
                     type="button"
                     onClick={connectMetaMask}
-                    className="w-full py-3 px-4 rounded-full font-medium text-white bg-orange-500 hover:bg-orange-600 transition shadow-md"
+                    whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(237, 137, 54, 0.4)" }}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-4 px-6 rounded-full font-medium text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 transition shadow-md flex items-center justify-center gap-2"
                   >
-                    Connect MetaMask
-                  </button>
-                ) : (
-                  <div className="flex items-center space-x-3">
-                    <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M16.707 5.293a1 1 0 00-1.414 0L9 11.586 6.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l7-7a1 1 0 000-1.414z" />
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
                     </svg>
-                    <span className="text-sm text-green-600">
-                      MetaMask Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                    </span>
-                  </div>
+                    Connect MetaMask
+                  </motion.button>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                    className="flex flex-col items-center space-y-3 w-full"
+                  >
+                    <div className="flex items-center space-x-3 bg-green-50 p-3 rounded-full w-full">
+                      <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 00-1.414 0L9 11.586 6.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l7-7a1 1 0 000-1.414z" />
+                      </svg>
+                      <span className="text-sm text-green-600 font-medium">
+                        MetaMask Connected
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 bg-gray-50 px-4 py-2 rounded-full">
+                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
+              
               <motion.button
                 type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full py-3 px-4 rounded-full font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 transition shadow-md ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                disabled={loading}
+                whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" }}
+                whileTap={{ scale: 0.97 }}
+                variants={itemVariants}
+                className={`w-full py-4 px-6 rounded-full font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition shadow-md ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                disabled={loading || !walletConnected}
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  <span>Sign in with Wallet</span>
+                )}
               </motion.button>
             </form>
           </div>
-          <div className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-gray-200 flex justify-between items-center">
+          
+          <motion.div 
+            variants={itemVariants}
+            className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-gray-200 flex justify-between items-center"
+          >
             <p className="text-sm text-gray-700">Don't have an account?</p>
             <Link to="/signup">
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, x: 3 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition"
+                className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1"
               >
                 Create account
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </motion.button>
             </Link>
-          </div>
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>
