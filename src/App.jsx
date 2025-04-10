@@ -4,23 +4,52 @@ import HomePage from './components/Home';
 import LoginPage from './components/Login';
 import SignupPage from './components/Signup';
 import Dashboard from './components/Dashboard';
-import { connectMetaMask, getMetaMaskAccount } from './utils/MetaMask';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { getMetaMaskAccount, connectMetaMask } from './utils/MetaMask';
 
-// Authentication Check
-const isAuthenticated = () => {
-  return localStorage.getItem('auth_token') !== null;
-};
-
-// Get User Type
-const getUserType = () => {
-  return localStorage.getItem('userType') || 'patient';
-};
-
-// Protected Route Component
+// Authentication Check HOC
 const ProtectedRoute = ({ children }) => {
-  if (!isAuthenticated()) {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-gray-50">
+        <div className="relative w-24 h-24">
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-200"></div>
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-indigo-600 text-sm font-medium">Loading</div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
+
+  return children;
+};
+
+// Role-Specific Route
+const RoleRoute = ({ allowedRole, children }) => {
+  const { userType, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-gray-50">
+        <div className="relative w-24 h-24">
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-200"></div>
+          <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-indigo-600 text-sm font-medium">Loading</div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (userType !== allowedRole) {
+    return <Navigate to={`/${userType}`} />;
+  }
+
   return children;
 };
 
@@ -41,10 +70,16 @@ const NotFound = () => (
   </div>
 );
 
-function App() {
+function AppContent() {
+  const { 
+    userType, 
+    walletConnected, 
+    walletAddress, 
+    setWalletConnected, 
+    setWalletAddress 
+  } = useAuth();
+  
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
 
   useEffect(() => {
     // Check if user has dark mode preference saved
@@ -65,7 +100,7 @@ function App() {
     };
     
     checkWalletConnection();
-  }, []);
+  }, [setWalletConnected, setWalletAddress]);
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
@@ -100,9 +135,7 @@ function App() {
           element={
             <LoginPage 
               walletConnected={walletConnected}
-              setWalletConnected={setWalletConnected}
               walletAddress={walletAddress}
-              setWalletAddress={setWalletAddress}
             />
           } 
         />
@@ -111,9 +144,7 @@ function App() {
           element={
             <SignupPage 
               walletConnected={walletConnected}
-              setWalletConnected={setWalletConnected}
               walletAddress={walletAddress}
-              setWalletAddress={setWalletAddress}
             />
           } 
         />
@@ -124,7 +155,7 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard 
-                userType={getUserType()} 
+                userType={userType} 
                 isDarkMode={isDarkMode}
                 toggleDarkMode={toggleDarkMode}
                 walletConnected={walletConnected}
@@ -136,20 +167,22 @@ function App() {
           } 
         />
         
-        {/* Specific Dashboard Routes */}
+        {/* Role-Specific Dashboard Routes */}
         <Route 
           path="/patient" 
           element={
             <ProtectedRoute>
-              <Dashboard 
-                userType="patient" 
-                isDarkMode={isDarkMode}
-                toggleDarkMode={toggleDarkMode}
-                walletConnected={walletConnected}
-                walletAddress={walletAddress}
-                handleConnectWallet={handleConnectWallet}
-                handleDisconnectWallet={handleDisconnectWallet}
-              />
+              <RoleRoute allowedRole="patient">
+                <Dashboard 
+                  userType="patient" 
+                  isDarkMode={isDarkMode}
+                  toggleDarkMode={toggleDarkMode}
+                  walletConnected={walletConnected}
+                  walletAddress={walletAddress}
+                  handleConnectWallet={handleConnectWallet}
+                  handleDisconnectWallet={handleDisconnectWallet}
+                />
+              </RoleRoute>
             </ProtectedRoute>
           } 
         />
@@ -157,15 +190,17 @@ function App() {
           path="/doctor" 
           element={
             <ProtectedRoute>
-              <Dashboard 
-                userType="doctor" 
-                isDarkMode={isDarkMode}
-                toggleDarkMode={toggleDarkMode}
-                walletConnected={walletConnected}
-                walletAddress={walletAddress}
-                handleConnectWallet={handleConnectWallet}
-                handleDisconnectWallet={handleDisconnectWallet}
-              />
+              <RoleRoute allowedRole="doctor">
+                <Dashboard 
+                  userType="doctor" 
+                  isDarkMode={isDarkMode}
+                  toggleDarkMode={toggleDarkMode}
+                  walletConnected={walletConnected}
+                  walletAddress={walletAddress}
+                  handleConnectWallet={handleConnectWallet}
+                  handleDisconnectWallet={handleDisconnectWallet}
+                />
+              </RoleRoute>
             </ProtectedRoute>
           } 
         />
@@ -173,15 +208,17 @@ function App() {
           path="/researcher" 
           element={
             <ProtectedRoute>
-              <Dashboard 
-                userType="researcher" 
-                isDarkMode={isDarkMode}
-                toggleDarkMode={toggleDarkMode}
-                walletConnected={walletConnected}
-                walletAddress={walletAddress}
-                handleConnectWallet={handleConnectWallet}
-                handleDisconnectWallet={handleDisconnectWallet}
-              />
+              <RoleRoute allowedRole="researcher">
+                <Dashboard 
+                  userType="researcher" 
+                  isDarkMode={isDarkMode}
+                  toggleDarkMode={toggleDarkMode}
+                  walletConnected={walletConnected}
+                  walletAddress={walletAddress}
+                  handleConnectWallet={handleConnectWallet}
+                  handleDisconnectWallet={handleDisconnectWallet}
+                />
+              </RoleRoute>
             </ProtectedRoute>
           } 
         />
@@ -242,6 +279,14 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

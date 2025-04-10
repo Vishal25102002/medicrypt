@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { connectMetaMask, getMetaMaskAccount, signMessage } from '../utils/MetaMask';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const { register, isAuthenticated, userType } = useAuth();
+  
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -84,10 +86,8 @@ const SignupPage = () => {
     document.body.style.overflowX = 'hidden';
 
     // If already authenticated, redirect immediately
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      const storedUserType = localStorage.getItem('userType') || 'patient';
-      navigate(`/${storedUserType}`);
+    if (isAuthenticated) {
+      navigate(`/${userType}`);
     }
 
     checkMetaMaskConnection();
@@ -99,34 +99,21 @@ const SignupPage = () => {
       document.body.style.padding = '';
       document.body.style.overflowX = '';
     };
-  }, [navigate]);
+  }, [navigate, isAuthenticated, userType]);
 
   const checkMetaMaskConnection = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
         const accounts = await getMetaMaskAccount();
         if (accounts) {
-          try {
-            const walletCheckResponse = await authService.checkWalletRegistration(accounts);
-            setWalletConnection({
-              connected: true,
-              address: accounts,
-              error: walletCheckResponse.isRegistered
-                ? 'This wallet is already registered. Please sign in instead.'
-                : null,
-              connecting: false,
-              isRegistered: walletCheckResponse.isRegistered,
-            });
-          } catch (error) {
-            console.warn("Error checking wallet registration:", error);
-            setWalletConnection({
-              connected: true,
-              address: accounts,
-              error: null,
-              connecting: false,
-              isRegistered: false,
-            });
-          }
+          // For demo, we're not checking if wallet is registered
+          setWalletConnection({
+            connected: true,
+            address: accounts,
+            error: null,
+            connecting: false,
+            isRegistered: false,
+          });
         }
       } catch (error) {
         console.error("Error checking MetaMask connection:", error);
@@ -150,21 +137,6 @@ const SignupPage = () => {
     });
     try {
       const account = await connectMetaMask();
-      try {
-        const walletCheckResponse = await authService.checkWalletRegistration(account);
-        if (walletCheckResponse.isRegistered) {
-          setWalletConnection({
-            connected: true,
-            address: account,
-            error: 'This wallet is already registered. Please use another wallet or sign in.',
-            connecting: false,
-            isRegistered: true,
-          });
-          return;
-        }
-      } catch (backendError) {
-        console.warn("Error checking wallet registration:", backendError);
-      }
       setWalletConnection({
         connected: true,
         address: account,
@@ -198,6 +170,41 @@ const SignupPage = () => {
     setStep(step - 1);
   };
 
+  // For demo purposes - quick signup buttons
+  const handleQuickSignup = async (role) => {
+    setLoading(true);
+    try {
+      // Create some dummy data based on role
+      const dummyData = {
+        firstName: role === 'patient' ? 'John' : role === 'doctor' ? 'Elizabeth' : 'Robert',
+        lastName: role === 'patient' ? 'Doe' : role === 'doctor' ? 'Carter' : 'Johnson',
+        email: `${role}@example.com`,
+        userType: role,
+        walletAddress: role === 'patient' 
+          ? '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
+          : role === 'doctor'
+          ? '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF'
+          : '0x6E0d01A76C3Cf4288372a29124A26D4353EE51BE',
+        signature: 'dummy_signature_' + Date.now(),
+        agreeTerms: true
+      };
+      
+      // Register the user
+      await register(dummyData);
+      
+      // Navigate to the role-specific dashboard
+      navigate(`/${role}`);
+    } catch (error) {
+      console.error("Quick signup error:", error);
+      setWalletConnection({
+        ...walletConnection,
+        error: error.message || 'Quick signup failed. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!walletConnection.connected) {
@@ -224,20 +231,17 @@ const SignupPage = () => {
         walletAddress: walletConnection.address,
         signature: signature,
       };
-      // Call API to register user
-      const response = await authService.register(submissionData);
-      // Save token and user type to localStorage if returned
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('userType', response.userType);
-      }
+      
+      // Register the user
+      await register(submissionData);
+      
       // Redirect to the dashboard matching the selected role
       navigate(`/${formData.userType}`);
     } catch (error) {
       console.error("Registration error:", error);
       setWalletConnection({
         ...walletConnection,
-        error: error.response?.data?.message || 'Registration failed. Please try again.',
+        error: error.message || 'Registration failed. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -317,6 +321,48 @@ const SignupPage = () => {
           </motion.p>
         </div>
 
+        {/* Demo: Quick Signup Buttons */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="mb-8 bg-white rounded-xl shadow-md p-4 max-w-md mx-auto"
+        >
+          <h3 className="text-center font-medium mb-3 text-gray-700">For Demo: Quick Signup</h3>
+          <div className="grid grid-cols-3 gap-2">
+            <motion.button
+              whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.5)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleQuickSignup('patient')}
+              disabled={loading}
+              className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+            >
+              Patient
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(16, 185, 129, 0.5)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleQuickSignup('doctor')}
+              disabled={loading}
+              className="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all"
+            >
+              Doctor
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.5)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleQuickSignup('researcher')}
+              disabled={loading}
+              className="p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all"
+            >
+              Researcher
+            </motion.button>
+          </div>
+          <div className="mt-3 text-center text-xs text-gray-500">
+            Select a role for instant access to the corresponding dashboard
+          </div>
+        </motion.div>
+
         <div className="mb-8 w-full max-w-md mx-auto">
           {/* Progress Indicator */}
           <div className="flex justify-between mb-2">
@@ -324,7 +370,7 @@ const SignupPage = () => {
               <motion.div
                 key={stepNumber}
                 className={`flex flex-col items-center ${stepNumber <= step ? 'text-indigo-600' : 'text-gray-400'}`}
-                animate={stepNumber === step ? { scale: [1, 1.05, 1] } : 1}
+                animate={stepNumber === step ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                 transition={{ duration: 1, repeat: stepNumber === step ? Infinity : 0, repeatType: "reverse" }}
               >
                 <div
@@ -592,129 +638,130 @@ const SignupPage = () => {
                           animate={{ x: [0, 5, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                         >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </motion.svg>
-                      </motion.button>
+                          </motion.svg>
+                        </motion.button>
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
-                )}
-
-                {step === 3 && (
-                  <motion.div
-                    key="step3"
-                    variants={formVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit={{ opacity: 0, x: -100 }}
-                  >
-                    <motion.div variants={itemVariants} className="mb-6">
-                      <h3 className="text-xl font-semibold mb-4 text-indigo-900">Connect Your Wallet</h3>
-                      <p className="text-gray-700 mb-4">
-                        To securely store your records and link your profile to the blockchain medical record system,
-                        please connect your MetaMask wallet.
-                      </p>
-                      <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100 mb-4">
-                        <div className="flex items-start">
-                          <svg className="w-5 h-5 text-indigo-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3h-1z" clipRule="evenodd" />
-                          </svg>
-                          <p className="ml-2 text-sm text-indigo-700">
-                            Ensure your MetaMask wallet is installed, unlocked, and not already registered.
-                          </p>
-                        </div>
-                      </div>
-                      {walletConnection.error && (
-                        <div className="mb-4 text-red-600 text-sm p-3 bg-red-50 rounded-lg border border-red-100">
-                          {walletConnection.error}
-                        </div>
-                      )}
-                      <motion.button
-                        type="button"
-                        onClick={connectMetaMaskWallet}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(237,137,54,0.4)" }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`w-full px-6 py-3 mb-4 ${walletConnection.connecting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-yellow-500'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center justify-center`}
-                        disabled={walletConnection.connecting || walletConnection.connected}
-                      >
-                        {walletConnection.connecting ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
-                            />
-                            <span>Connecting...</span>
-                          </>
-                        ) : walletConnection.connected ? (
-                          <>
-                            <svg className="w-5 h-5 mr-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  )}
+  
+                  {step === 3 && (
+                    <motion.div
+                      key="step3"
+                      variants={formVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit={{ opacity: 0, x: -100 }}
+                    >
+                      <motion.div variants={itemVariants} className="mb-6">
+                        <h3 className="text-xl font-semibold mb-4 text-indigo-900">Connect Your Wallet</h3>
+                        <p className="text-gray-700 mb-4">
+                          To securely store your records and link your profile to the blockchain medical record system,
+                          please connect your MetaMask wallet.
+                        </p>
+                        <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100 mb-4">
+                          <div className="flex items-start">
+                            <svg className="w-5 h-5 text-indigo-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3h-1z" clipRule="evenodd" />
                             </svg>
-                            <span>Connected with MetaMask</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
-                            </svg>
-                            Connect MetaMask
-                          </>
-                        )}
-                      </motion.button>
-                      {walletConnection.connected && !walletConnection.error && (
-                        <div className="flex items-center justify-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-100 mb-4">
-                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-green-700 text-sm font-medium">
-                            Wallet Connected: {truncateAddress(walletConnection.address)}
-                          </span>
+                            <p className="ml-2 text-sm text-indigo-700">
+                              Ensure your MetaMask wallet is installed, unlocked, and not already registered.
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </motion.div>
-                    <motion.div variants={itemVariants} className="flex justify-between">
-                      <motion.button
-                        type="button"
-                        onClick={prevStep}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="px-6 py-3 border-2 border-gray-300 rounded-full font-medium hover:bg-gray-50 transition flex items-center"
-                      >
-                        <svg className="mr-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Back
-                      </motion.button>
-                      <motion.button
-                        type="submit"
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.4)" }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`px-6 py-3 ${loading || !walletConnection.connected ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center`}
-                        disabled={loading || !walletConnection.connected}
-                      >
-                        {loading ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
-                            />
-                            <span>Creating Account...</span>
-                          </>
-                        ) : (
-                          <span>Create Account</span>
+                        {walletConnection.error && (
+                          <div className="mb-4 text-red-600 text-sm p-3 bg-red-50 rounded-lg border border-red-100">
+                            {walletConnection.error}
+                          </div>
                         )}
-                      </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={connectMetaMaskWallet}
+                          whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(237,137,54,0.4)" }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`w-full px-6 py-3 mb-4 ${walletConnection.connecting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-yellow-500'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center justify-center`}
+                          disabled={walletConnection.connecting || walletConnection.connected}
+                        >
+                          {walletConnection.connecting ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                              />
+                              <span>Connecting...</span>
+                            </>
+                          ) : walletConnection.connected ? (
+                            <>
+                              <svg className="w-5 h-5 mr-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              <span>Connected with MetaMask</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
+                              </svg>
+                              Connect MetaMask
+                            </>
+                          )}
+                        </motion.button>
+                        {walletConnection.connected && !walletConnection.error && (
+                          <div className="flex items-center justify-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-100 mb-4">
+                            <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-green-700 text-sm font-medium">
+                              Wallet Connected: {truncateAddress(walletConnection.address)}
+                            </span>
+                          </div>
+                        )}
+                      </motion.div>
+                      <motion.div variants={itemVariants} className="flex justify-between">
+                        <motion.button
+                          type="button"
+                          onClick={prevStep}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-6 py-3 border-2 border-gray-300 rounded-full font-medium hover:bg-gray-50 transition flex items-center"
+                        >
+                          <svg className="mr-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                          </svg>
+                          Back
+                        </motion.button>
+                        <motion.button
+                          type="submit"
+                          whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.4)" }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`px-6 py-3 ${loading || !walletConnection.connected ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center`}
+                          disabled={loading || !walletConnection.connected}
+                        >
+                          {loading ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                              />
+                              <span>Creating Account...</span>
+                            </>
+                          ) : (
+                            <span>Create Account</span>
+                          )}
+                        </motion.button>
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </form>
-          </div>
+                  )}
+                </AnimatePresence>
+              </form>
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
-    </div>
-  );
-};
-
-export default SignupPage;
+      </div>
+    );
+  };
+  
+  export default SignupPage;

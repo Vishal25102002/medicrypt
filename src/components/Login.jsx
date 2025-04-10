@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { connectMetaMask, signMessage } from '../utils/MetaMask';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
+  const { login, isAuthenticated, userType } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [walletConnection, setWalletConnection] = useState({
+    connected: false,
+    address: '',
+    error: null,
+    connecting: false
+  });
 
   useEffect(() => {
     document.documentElement.style.width = '100%';
@@ -19,9 +25,7 @@ const LoginPage = () => {
     document.body.style.overflowX = 'hidden';
     
     // Check if user is already authenticated
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      const userType = localStorage.getItem('userType') || 'patient';
+    if (isAuthenticated) {
       navigate(`/${userType}`);
     }
     
@@ -32,43 +36,41 @@ const LoginPage = () => {
       document.body.style.padding = '';
       document.body.style.overflowX = '';
     };
-  }, [navigate]);
+  }, [navigate, isAuthenticated, userType]);
 
   const handleMetaMaskConnect = async () => {
     if (loading) return;
     
     setError(null);
-    setLoading(true);
+    setWalletConnection({
+      ...walletConnection,
+      connecting: true,
+      error: null
+    });
     
     try {
       const account = await connectMetaMask();
       
-      // Check if the wallet is registered
-      try {
-        const walletCheck = await authService.checkWalletRegistration(account);
-        if (!walletCheck.isRegistered) {
-          setError('This wallet is not registered. Please sign up first.');
-          setLoading(false);
-          return;
-        }
-      } catch (checkError) {
-        console.error('Error checking wallet registration:', checkError);
-        // Continue with login process even if check fails
-      }
-      
-      setWalletConnected(true);
-      setWalletAddress(account);
-      setLoading(false);
+      // For demo, we'll assume the wallet is registered
+      setWalletConnection({
+        connected: true,
+        address: account,
+        connecting: false,
+        error: null
+      });
     } catch (err) {
       console.error("MetaMask connection error:", err);
-      setError(err.message || 'Failed to connect MetaMask. Please try again.');
-      setLoading(false);
+      setWalletConnection({
+        ...walletConnection,
+        connecting: false,
+        error: err.message || 'Failed to connect MetaMask. Please try again.'
+      });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!walletConnected) {
+    if (!walletConnection.connected) {
       setError('Please connect your MetaMask wallet to sign in.');
       return;
     }
@@ -79,17 +81,48 @@ const LoginPage = () => {
     try {
       // Sign a message to verify wallet ownership
       const message = `Sign this message to authenticate with MediCrypt: ${Date.now()}`;
-      const signature = await signMessage(walletAddress, message);
+      const signature = await signMessage(walletConnection.address, message);
       
       // Login with wallet address and signature
-      const response = await authService.login(walletAddress, signature);
+      await login(walletConnection.address, signature);
       
       // Navigate to the appropriate dashboard
-      const userType = response.userType || 'patient';
       navigate(`/${userType}`);
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.response?.data?.message || 'Login failed. Please check your wallet and try again.');
+      setError(err.message || 'Login failed. Please check your wallet and try again.');
+      setLoading(false);
+    }
+  };
+
+  // For demo purposes - quick login buttons
+  const handleQuickLogin = async (role) => {
+    setLoading(true);
+    setError(null);
+    
+    let dummyAddress = '';
+    
+    // Use different addresses based on role
+    if (role === 'patient') {
+      dummyAddress = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
+    } else if (role === 'doctor') {
+      dummyAddress = '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF';
+    } else if (role === 'researcher') {
+      dummyAddress = '0x6E0d01A76C3Cf4288372a29124A26D4353EE51BE';
+    }
+    
+    try {
+      // Skip signature for demo
+      const dummySignature = 'dummy_signature_' + Date.now();
+      
+      // Login with wallet address and signature
+      await login(dummyAddress, dummySignature);
+      
+      // Navigate to the appropriate dashboard
+      navigate(`/${role}`);
+    } catch (err) {
+      console.error("Quick login error:", err);
+      setError(err.message || 'Login failed. Please try again.');
       setLoading(false);
     }
   };
@@ -126,6 +159,12 @@ const LoginPage = () => {
         ease: "easeInOut"
       }
     }
+  };
+  
+  // Function to truncate wallet address for display
+  const truncateAddress = (addr) => {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   return (
@@ -225,7 +264,7 @@ const LoginPage = () => {
                   </motion.div>
                 )}
                 
-                {!walletConnected ? (
+                {!walletConnection.connected ? (
                   <motion.button
                     type="button"
                     onClick={handleMetaMaskConnect}
@@ -268,7 +307,7 @@ const LoginPage = () => {
                       </span>
                     </div>
                     <div className="text-xs text-gray-500 bg-gray-50 px-4 py-2 rounded-full">
-                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                      {walletConnection.address.slice(0, 6)}...{walletConnection.address.slice(-4)}
                     </div>
                   </motion.div>
                 )}
@@ -280,7 +319,7 @@ const LoginPage = () => {
                 whileTap={{ scale: 0.97 }}
                 variants={itemVariants}
                 className={`w-full py-4 px-6 rounded-full font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition shadow-md ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                disabled={loading || !walletConnected}
+                disabled={loading || !walletConnection.connected}
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
@@ -297,6 +336,40 @@ const LoginPage = () => {
               </motion.button>
             </form>
           </div>
+          
+          {/* Demo: Quick Login Buttons */}
+          <motion.div
+            variants={itemVariants}
+            className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-blue-50 border-t border-gray-200"
+          >
+            <p className="text-sm font-medium text-gray-700 mb-2">For Demo: Quick Login</p>
+            <div className="grid grid-cols-3 gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleQuickLogin('patient')}
+                className="px-2 py-2 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Patient Login
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleQuickLogin('doctor')}
+                className="px-2 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Doctor Login
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleQuickLogin('researcher')}
+                className="px-2 py-2 text-xs font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Researcher Login
+              </motion.button>
+            </div>
+          </motion.div>
           
           <motion.div 
             variants={itemVariants}
