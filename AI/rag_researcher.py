@@ -4,7 +4,7 @@ from vector_index import retrieve_relevant_records  # Ensure this returns a list
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Set your Google API key (set this in your environment or replace the default string)
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDU8mIzLFSiCvGVXqfNwDa4v0FN6NvGBg4")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 def sanitize_data(record, level="full"):
     """
