@@ -4,7 +4,7 @@ from vector_index import retrieve_relevant_record  # Make sure this function exi
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Set your Google API key (ensure it's in your environment or replace with your key)
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDU8mIzLFSiCvGVXqfNwDa4v0FN6NvGBg4")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 def chat_loop_patient():
     conversation_history = [
