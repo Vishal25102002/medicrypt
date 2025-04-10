@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  PATIENT
+  RESEARCHER
+  THIRD_PARTY
+}
+
+enum AccessStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  role          Role
+  name          String   @default("")  // Default empty string for name
+  email         String   @unique @default("")  // Default empty string for email
+  contact       String?
+  createdAt     DateTime @default(now())
+
+  // Relationships
+  patients       Patient[]
+  doctors        Doctor[]
+  researchers    Researcher[]
+  accessRequests AccessRequest[]
+  accessLogs     AccessLog[]
+}
+
+model Patient {
+  id             String          @id @default(uuid())
+  userId         String          @unique
+  user           User            @relation(fields: [userId], references: [id])
+  medicalRecords MedicalRecord[] @relation("PatientRecords")
+  doctorId       String?
+  doctor         Doctor?         @relation(fields: [doctorId], references: [id])
+}
+
+model Doctor {
+  id       String   @id @default(uuid())
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id])
+  
+  // A doctor may have many patients
+  patients Patient[]
+}
+
+model Researcher {
+  id       String   @id @default(uuid())
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model MedicalRecord {
+  id             String         @id @default(uuid())
+  cid            String         // Encrypted file pointer (CID from IPFS)
+  fileName       String?        // Optional file metadata
+  createdAt      DateTime       @default(now())
+
+  // The owner of the record is a patient.
+  patient   Patient @relation("PatientRecords", fields: [patientId], references: [id])
+  patientId String
+
+  // Relation to access requests for this record.
+  accessRequests AccessRequest[]
+
+  // Reverse relation for access logs.
+  accessLogs    AccessLog[]   @relation("RecordAccessLogs")
+}
+
+model AccessRequest {
+  id              String         @id @default(uuid())
+  medicalRecord   MedicalRecord  @relation(fields: [medicalRecordId], references: [id])
+  medicalRecordId String
+  requester       User           @relation(fields: [requesterId], references: [id])
+  requesterId     String
+  status          AccessStatus   @default(PENDING)
+  createdAt       DateTime       @default(now())
+}
+
+model AccessLog {
+  id            Int             @id @default(autoincrement())
+
+  // Relation: log belongs to a MedicalRecord
+  record        MedicalRecord   @relation("RecordAccessLogs", fields: [recordId], references: [id])
+  recordId      String
+
+  // The user performing the action is referenced:
+  performedBy   User            @relation(fields: [performedById], references: [id])
+  performedById String
+
+  action        String          // e.g., "REQUESTED", "GRANTED", "VIEWED"
+  timestamp     DateTime        @default(now())
+}
