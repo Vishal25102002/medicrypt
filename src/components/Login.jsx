@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { authService } from '../services/api';
+import { connectMetaMask, signMessage } from '../utils/MetaMask';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     document.documentElement.style.width = '100%';
@@ -15,6 +17,14 @@ const LoginPage = () => {
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflowX = 'hidden';
+    
+    // Check if user is already authenticated
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const userType = localStorage.getItem('userType') || 'patient';
+      navigate(`/${userType}`);
+    }
+    
     return () => {
       document.documentElement.style.width = '';
       document.body.style.width = '';
@@ -22,67 +32,66 @@ const LoginPage = () => {
       document.body.style.padding = '';
       document.body.style.overflowX = '';
     };
-  }, []);
+  }, [navigate]);
 
-  const connectMetaMask = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      alert('MetaMask is not installed. Please install it to continue.');
-      return;
-    }
+  const handleMetaMaskConnect = async () => {
+    if (loading) return;
+    
+    setError(null);
+    setLoading(true);
+    
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        setWalletConnected(true);
-        setWalletAddress(accounts[0]);
+      const account = await connectMetaMask();
+      
+      // Check if the wallet is registered
+      try {
+        const walletCheck = await authService.checkWalletRegistration(account);
+        if (!walletCheck.isRegistered) {
+          setError('This wallet is not registered. Please sign up first.');
+          setLoading(false);
+          return;
+        }
+      } catch (checkError) {
+        console.error('Error checking wallet registration:', checkError);
+        // Continue with login process even if check fails
       }
+      
+      setWalletConnected(true);
+      setWalletAddress(account);
+      setLoading(false);
     } catch (err) {
       console.error("MetaMask connection error:", err);
-      alert('Failed to connect MetaMask. Please try again.');
+      setError(err.message || 'Failed to connect MetaMask. Please try again.');
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!walletConnected) {
-      alert('Please connect your MetaMask wallet to sign in.');
+      setError('Please connect your MetaMask wallet to sign in.');
       return;
     }
+    
     setLoading(true);
+    setError(null);
 
     try {
-      // Call your backend login API to verify the wallet address only
-      const response = await axios.post('your-backend-url/api/login', {
-        walletAddress
-      });
-
-      if (response.data.success) {
-        // Save authentication status and userType locally
-        localStorage.setItem('isAuthenticated', 'true');
-        const userType = response.data.userType;
-        localStorage.setItem('userType', userType);
-
-        // Redirect user to the appropriate dashboard based on userType
-        switch (userType) {
-          case 'patient':
-            navigate('/patient');
-            break;
-          case 'doctor':
-            navigate('/doctor');
-            break;
-          case 'researcher':
-            navigate('/researcher');
-            break;
-          default:
-            navigate('/dashboard');
-        }
-      } else {
-        alert('Invalid wallet address. Please try again.');
-      }
+      // Sign a message to verify wallet ownership
+      const message = `Sign this message to authenticate with MediCrypt: ${Date.now()}`;
+      const signature = await signMessage(walletAddress, message);
+      
+      // Login with wallet address and signature
+      const response = await authService.login(walletAddress, signature);
+      
+      // Navigate to the appropriate dashboard
+      const userType = response.userType || 'patient';
+      navigate(`/${userType}`);
     } catch (err) {
       console.error("Login error:", err);
-      alert('Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Login failed. Please check your wallet and try again.');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Animation variants
@@ -206,18 +215,42 @@ const LoginPage = () => {
                   </svg>
                 </motion.div>
                 
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full p-3 mb-4 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+                
                 {!walletConnected ? (
                   <motion.button
                     type="button"
-                    onClick={connectMetaMask}
+                    onClick={handleMetaMaskConnect}
                     whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(237, 137, 54, 0.4)" }}
                     whileTap={{ scale: 0.97 }}
                     className="w-full py-4 px-6 rounded-full font-medium text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 transition shadow-md flex items-center justify-center gap-2"
+                    disabled={loading}
                   >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
-                    </svg>
-                    Connect MetaMask
+                    {loading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
+                        </svg>
+                        Connect MetaMask
+                      </>
+                    )}
                   </motion.button>
                 ) : (
                   <motion.div 

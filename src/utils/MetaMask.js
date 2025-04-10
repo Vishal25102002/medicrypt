@@ -156,37 +156,6 @@ export const isMetaMaskInstalled = () => {
     window.ethereum.removeListener(eventName, callback);
   };
   
-  /**
-   * Request to add custom token to MetaMask
-   * @param {Object} tokenData Token data including address, symbol, decimals and image
-   * @returns {Promise<boolean>} Whether the token was added successfully
-   */
-  export const addTokenToMetaMask = async (tokenData) => {
-    if (!isMetaMaskInstalled()) {
-      throw new Error('MetaMask is not installed');
-    }
-  
-    try {
-      const wasAdded = await window.ethereum.request({
-        method: 'wallet_watchAsset',
-        params: {
-          type: 'ERC20',
-          options: {
-            address: tokenData.address,
-            symbol: tokenData.symbol,
-            decimals: tokenData.decimals,
-            image: tokenData.image
-          }
-        }
-      });
-  
-      return wasAdded;
-    } catch (error) {
-      console.error('Error adding token to MetaMask:', error);
-      throw error;
-    }
-  };
-  
   export default {
     isMetaMaskInstalled,
     getMetaMaskAccount,
@@ -197,6 +166,5 @@ export const isMetaMaskInstalled = () => {
     signMessage,
     handleAccountsChanged,
     handleChainChanged,
-    removeMetaMaskListener,
-    addTokenToMetaMask
+    removeMetaMaskListener
   };

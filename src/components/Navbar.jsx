@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { authService } from '../services/api';
 
 const Navbar = ({ 
   toggleSidebar, 
@@ -26,6 +27,12 @@ const Navbar = ({
   const truncateAddress = (address) => {
     if (!address) return '';
     return address.slice(0, 6) + '...' + address.slice(-4);
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    authService.logout();
+    window.location.href = '/login';
   };
 
   return (
@@ -261,11 +268,14 @@ const Navbar = ({
                   )}
                   
                   <div className="border-t border-gray-200 mt-2">
-                    <Link to="/login" className={`block px-4 py-2 text-sm ${
-                      isDarkMode ? 'text-red-400 hover:bg-gray-700' : 'text-red-600 hover:bg-gray-100'
-                    }`}>
+                    <button 
+                      onClick={handleLogout}
+                      className={`block w-full text-left px-4 py-2 text-sm ${
+                        isDarkMode ? 'text-red-400 hover:bg-gray-700' : 'text-red-600 hover:bg-gray-100'
+                      }`}
+                    >
                       Sign out
-                    </Link>
+                    </button>
                   </div>
                 </motion.div>
               )}

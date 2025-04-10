@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { authService } from '../services/api';
+import { connectMetaMask, getMetaMaskAccount, signMessage } from '../utils/MetaMask';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const SignupPage = () => {
     email: '',
     agreeTerms: false,
     receiveUpdates: false,
-    userType: 'patient' // Options: 'patient', 'doctor', or 'researcher'
+    userType: 'patient', // Options: 'patient', 'doctor', or 'researcher'
   });
 
   const [walletConnection, setWalletConnection] = useState({
@@ -24,13 +25,73 @@ const SignupPage = () => {
     isRegistered: false,
   });
 
+  // Helper function to truncate wallet address for display
+  const truncateAddress = (addr) => {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  // Animation Variants
+  const formVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } },
+  };
+
+  // Define roles options
+  const roles = [
+    {
+      type: 'patient',
+      label: 'Patient',
+      description: 'Manage your own records',
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+    },
+    {
+      type: 'doctor',
+      label: 'Doctor',
+      description: 'Provide patient care',
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5" />
+        </svg>
+      ),
+    },
+    {
+      type: 'researcher',
+      label: 'Researcher',
+      description: 'Analyze and access medical data securely',
+      icon: (
+        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 20l9-5-9-5-9 5 9 5zm0-13v8" />
+        </svg>
+      ),
+    },
+  ];
+
   useEffect(() => {
     document.documentElement.style.width = '100%';
     document.body.style.width = '100%';
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflowX = 'hidden';
+
+    // If already authenticated, redirect immediately
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const storedUserType = localStorage.getItem('userType') || 'patient';
+      navigate(`/${storedUserType}`);
+    }
+
     checkMetaMaskConnection();
+
     return () => {
       document.documentElement.style.width = '';
       document.body.style.width = '';
@@ -38,28 +99,29 @@ const SignupPage = () => {
       document.body.style.padding = '';
       document.body.style.overflowX = '';
     };
-  }, []);
+  }, [navigate]);
 
   const checkMetaMaskConnection = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
+        const accounts = await getMetaMaskAccount();
+        if (accounts) {
           try {
-            const walletCheckResponse = await axios.get(`your-backend-url/api/wallet-check/${accounts[0]}`);
+            const walletCheckResponse = await authService.checkWalletRegistration(accounts);
             setWalletConnection({
               connected: true,
-              address: accounts[0],
-              error: walletCheckResponse.data.isRegistered
-                ? 'This wallet is already registered.'
+              address: accounts,
+              error: walletCheckResponse.isRegistered
+                ? 'This wallet is already registered. Please sign in instead.'
                 : null,
               connecting: false,
-              isRegistered: walletCheckResponse.data.isRegistered,
+              isRegistered: walletCheckResponse.isRegistered,
             });
           } catch (error) {
+            console.warn("Error checking wallet registration:", error);
             setWalletConnection({
               connected: true,
-              address: accounts[0],
+              address: accounts,
               error: null,
               connecting: false,
               isRegistered: false,
@@ -72,30 +134,28 @@ const SignupPage = () => {
     }
   };
 
-  const connectMetaMask = async () => {
+  const connectMetaMaskWallet = async () => {
     if (typeof window.ethereum === 'undefined') {
       setWalletConnection({
         ...walletConnection,
         error: 'MetaMask is not installed. Please install MetaMask to continue.',
-        connecting: false
+        connecting: false,
       });
       return;
     }
-
     setWalletConnection({
       ...walletConnection,
       connecting: true,
-      error: null
+      error: null,
     });
-
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const account = await connectMetaMask();
       try {
-        const walletCheckResponse = await axios.get(`your-backend-url/api/wallet-check/${accounts[0]}`);
-        if (walletCheckResponse.data.isRegistered) {
+        const walletCheckResponse = await authService.checkWalletRegistration(account);
+        if (walletCheckResponse.isRegistered) {
           setWalletConnection({
             connected: true,
-            address: accounts[0],
+            address: account,
             error: 'This wallet is already registered. Please use another wallet or sign in.',
             connecting: false,
             isRegistered: true,
@@ -105,10 +165,9 @@ const SignupPage = () => {
       } catch (backendError) {
         console.warn("Error checking wallet registration:", backendError);
       }
-
       setWalletConnection({
         connected: true,
-        address: accounts[0],
+        address: account,
         error: null,
         connecting: false,
         isRegistered: false,
@@ -118,7 +177,7 @@ const SignupPage = () => {
       setWalletConnection({
         ...walletConnection,
         error: error.message || 'Failed to connect to MetaMask. Please try again.',
-        connecting: false
+        connecting: false,
       });
     }
   };
@@ -127,7 +186,7 @@ const SignupPage = () => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -144,99 +203,50 @@ const SignupPage = () => {
     if (!walletConnection.connected) {
       setWalletConnection({
         ...walletConnection,
-        error: 'MetaMask connection is required to create an account.'
+        error: 'MetaMask connection is required to create an account.',
       });
       return;
     }
-
+    if (!formData.agreeTerms) {
+      setWalletConnection({
+        ...walletConnection,
+        error: 'You must agree to the terms and conditions to continue.',
+      });
+      return;
+    }
     setLoading(true);
-
-    const submissionData = {
-      ...formData,
-      walletAddress: walletConnection.address
-    };
-
     try {
-      // Call your backend registration API to save user details and wallet info 
-      // into your blockchain medical record system
-      const response = await axios.post('your-backend-url/api/register', submissionData);
-      if (response.data.success) {
-        // Redirect to the appropriate dashboard based on userType
-        switch (formData.userType) {
-          case 'patient':
-            navigate('/patient');
-            break;
-          case 'doctor':
-            navigate('/doctor');
-            break;
-          case 'researcher':
-            navigate('/researcher');
-            break;
-          default:
-            navigate('/dashboard');
-        }
-      } else {
-        alert('Registration failed. Please try again.');
+      // Sign a message to verify wallet ownership
+      const message = `Sign this message to create your MediCrypt account: ${Date.now()}`;
+      const signature = await signMessage(walletConnection.address, message);
+      const submissionData = {
+        ...formData,
+        walletAddress: walletConnection.address,
+        signature: signature,
+      };
+      // Call API to register user
+      const response = await authService.register(submissionData);
+      // Save token and user type to localStorage if returned
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('userType', response.userType);
       }
+      // Redirect to the dashboard matching the selected role
+      navigate(`/${formData.userType}`);
     } catch (error) {
       console.error("Registration error:", error);
-      alert('Registration failed. Please try again.');
+      setWalletConnection({
+        ...walletConnection,
+        error: error.response?.data?.message || 'Registration failed. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const formVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
-  };
-
-  // Update the roles array with options for 'patient', 'doctor', and 'researcher'
-  const roles = [
-    {
-      type: 'patient',
-      label: 'Patient',
-      description: 'Manage your own records',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
-    {
-      type: 'doctor',
-      label: 'Doctor',
-      description: 'Provide patient care',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5" />
-        </svg>
-      )
-    },
-    {
-      type: 'researcher',
-      label: 'Researcher',
-      description: 'Analyze and access medical data securely',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 20l9-5-9-5-9 5 9 5zm0-13v8" />
-        </svg>
-      )
-    }
-  ];
-
-  // Helper function to truncate the wallet address for display
-  const truncateAddress = (addr) => {
-    return addr.slice(0, 6) + "..." + addr.slice(-4);
-  };
-
   return (
     <div className="min-h-screen w-screen max-w-full bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 flex flex-col justify-center items-center p-4 md:p-8 relative overflow-hidden">
+      {/* Background Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(8)].map((_, i) => (
           <motion.div
@@ -258,7 +268,7 @@ const SignupPage = () => {
               duration: Math.random() * 10 + 15,
               repeat: Infinity,
               repeatType: "reverse",
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         ))}
@@ -272,16 +282,16 @@ const SignupPage = () => {
       >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
-            <motion.svg 
-              className="w-8 h-8 text-indigo-600" 
-              viewBox="0 0 24 24" 
+            <motion.svg
+              className="w-8 h-8 text-indigo-600"
+              viewBox="0 0 24 24"
               fill="currentColor"
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.7 }}
             >
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </motion.svg>
-            <motion.span 
+            <motion.span
               className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text"
               whileHover={{ letterSpacing: "0.05em" }}
               transition={{ duration: 0.3 }}
@@ -289,7 +299,7 @@ const SignupPage = () => {
               MediCrypt
             </motion.span>
           </Link>
-          <motion.h2 
+          <motion.h2
             className="mt-6 text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -297,7 +307,7 @@ const SignupPage = () => {
           >
             Create Your Account
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="mt-2 text-gray-700"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -308,28 +318,30 @@ const SignupPage = () => {
         </div>
 
         <div className="mb-8 w-full max-w-md mx-auto">
+          {/* Progress Indicator */}
           <div className="flex justify-between mb-2">
             {[1, 2, 3].map((stepNumber) => (
-              <motion.div 
+              <motion.div
                 key={stepNumber}
                 className={`flex flex-col items-center ${stepNumber <= step ? 'text-indigo-600' : 'text-gray-400'}`}
                 animate={stepNumber === step ? { scale: [1, 1.05, 1] } : 1}
                 transition={{ duration: 1, repeat: stepNumber === step ? Infinity : 0, repeatType: "reverse" }}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 
-                  ${stepNumber < step
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
-                    : stepNumber === step
-                      ? 'bg-white border-2 border-indigo-600 text-indigo-600'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 
+                    ${stepNumber < step
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
+                      : stepNumber === step
+                        ? 'bg-white border-2 border-indigo-600 text-indigo-600'
+                        : 'bg-gray-100 text-gray-400'
+                    }`}
                 >
                   {stepNumber < step ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
-                    roles[stepNumber - 1]?.icon
+                    <span>{stepNumber}</span>
                   )}
                 </div>
                 <span className={`text-xs ${stepNumber <= step ? 'font-medium' : ''}`}>
@@ -339,8 +351,8 @@ const SignupPage = () => {
             ))}
           </div>
           <div className="relative h-2 rounded-full bg-gray-200 overflow-hidden">
-            <motion.div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full" 
+            <motion.div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full"
               initial={{ width: "33.33%" }}
               animate={{ width: `${(step / 3) * 100}%` }}
               transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -359,10 +371,10 @@ const SignupPage = () => {
             <form onSubmit={step === 3 ? handleSubmit : (e) => e.preventDefault()}>
               <AnimatePresence mode="wait">
                 {step === 1 && (
-                  <motion.div 
+                  <motion.div
                     key="step1"
-                    variants={formVariants} 
-                    initial="hidden" 
+                    variants={formVariants}
+                    initial="hidden"
                     animate="visible"
                     exit={{ opacity: 0, x: -100 }}
                   >
@@ -438,11 +450,42 @@ const SignupPage = () => {
                         />
                       </div>
                     </motion.div>
+                    <motion.div variants={itemVariants} className="mb-6">
+                      <div className="flex items-center">
+                        <input
+                          id="agreeTerms"
+                          name="agreeTerms"
+                          type="checkbox"
+                          checked={formData.agreeTerms}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-indigo-600 form-checkbox focus:ring-indigo-500 border-gray-300 rounded"
+                          required
+                        />
+                        <label htmlFor="agreeTerms" className="ml-2 block text-sm text-gray-700">
+                          I agree to the <a href="#" className="text-indigo-600 hover:text-indigo-800">Terms of Service</a> and <a href="#" className="text-indigo-600 hover:text-indigo-800">Privacy Policy</a>
+                        </label>
+                      </div>
+                    </motion.div>
+                    <motion.div variants={itemVariants} className="mb-6">
+                      <div className="flex items-center">
+                        <input
+                          id="receiveUpdates"
+                          name="receiveUpdates"
+                          type="checkbox"
+                          checked={formData.receiveUpdates}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-indigo-600 form-checkbox focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="receiveUpdates" className="ml-2 block text-sm text-gray-700">
+                          I would like to receive updates and notifications about my health records
+                        </label>
+                      </div>
+                    </motion.div>
                     <motion.div variants={itemVariants} className="flex justify-end">
                       <motion.button
                         type="button"
                         onClick={nextStep}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" }}
+                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.4)" }}
                         whileTap={{ scale: 0.98 }}
                         className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-medium hover:opacity-90 transition flex items-center"
                       >
@@ -464,10 +507,10 @@ const SignupPage = () => {
                 )}
 
                 {step === 2 && (
-                  <motion.div 
+                  <motion.div
                     key="step2"
-                    variants={formVariants} 
-                    initial="hidden" 
+                    variants={formVariants}
+                    initial="hidden"
                     animate="visible"
                     exit={{ opacity: 0, x: -100 }}
                   >
@@ -489,7 +532,7 @@ const SignupPage = () => {
                                 ? 'border-indigo-500 bg-indigo-50 shadow-md'
                                 : 'border-gray-300 hover:bg-gray-50'
                             }`}
-                            whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.2)" }}
+                            whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.2)" }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex flex-col items-center text-center">
@@ -502,7 +545,6 @@ const SignupPage = () => {
                               </div>
                               <span className="font-medium text-lg">{item.label}</span>
                               <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                              
                               {formData.userType === item.type && (
                                 <motion.div
                                   className="mt-3 bg-indigo-600 text-white rounded-full px-3 py-1 text-xs flex items-center"
@@ -536,15 +578,15 @@ const SignupPage = () => {
                       <motion.button
                         type="button"
                         onClick={nextStep}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" }}
+                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.4)" }}
                         whileTap={{ scale: 0.98 }}
                         className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center"
                       >
                         Continue
-                        <motion.svg 
-                          className="ml-2 w-5 h-5" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
+                        <motion.svg
+                          className="ml-2 w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
                           stroke="currentColor"
                           initial={{ x: 0 }}
                           animate={{ x: [0, 5, 0] }}
@@ -558,10 +600,10 @@ const SignupPage = () => {
                 )}
 
                 {step === 3 && (
-                  <motion.div 
+                  <motion.div
                     key="step3"
-                    variants={formVariants} 
-                    initial="hidden" 
+                    variants={formVariants}
+                    initial="hidden"
                     animate="visible"
                     exit={{ opacity: 0, x: -100 }}
                   >
@@ -574,7 +616,7 @@ const SignupPage = () => {
                       <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100 mb-4">
                         <div className="flex items-start">
                           <svg className="w-5 h-5 text-indigo-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3h-1z" clipRule="evenodd" />
                           </svg>
                           <p className="ml-2 text-sm text-indigo-700">
                             Ensure your MetaMask wallet is installed, unlocked, and not already registered.
@@ -582,23 +624,51 @@ const SignupPage = () => {
                         </div>
                       </div>
                       {walletConnection.error && (
-                        <div className="mb-4 text-red-600 text-sm">
+                        <div className="mb-4 text-red-600 text-sm p-3 bg-red-50 rounded-lg border border-red-100">
                           {walletConnection.error}
                         </div>
                       )}
                       <motion.button
                         type="button"
-                        onClick={connectMetaMask}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" }}
+                        onClick={connectMetaMaskWallet}
+                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(237,137,54,0.4)" }}
                         whileTap={{ scale: 0.98 }}
-                        className={`w-full px-6 py-3 ${walletConnection.connecting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-yellow-500'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center justify-center`}
-                        disabled={walletConnection.connecting}
+                        className={`w-full px-6 py-3 mb-4 ${walletConnection.connecting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-yellow-500'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center justify-center`}
+                        disabled={walletConnection.connecting || walletConnection.connected}
                       >
-                        {walletConnection.connecting ? 'Connecting...' : 'Connect MetaMask'}
+                        {walletConnection.connecting ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                            />
+                            <span>Connecting...</span>
+                          </>
+                        ) : walletConnection.connected ? (
+                          <>
+                            <svg className="w-5 h-5 mr-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            <span>Connected with MetaMask</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19.44 4.02H4.56A2.56 2.56 0 002 6.58v10.84A2.56 2.56 0 004.56 20h14.88A2.56 2.56 0 0022 17.42V6.58a2.56 2.56 0 00-2.56-2.56zM10.9 13.68H7.07v1.93h2.51v1.25H7.07v1.97h3.83v1.28H5.72V12.4h5.18v1.28zm1.86 5.15h-1.35V12.4h1.35v6.43zm6.72 0h-5.18v-1.28h3.83v-1.97h-2.51v-1.25h2.51v-1.93h-3.83V12.4h5.18v6.43z" />
+                            </svg>
+                            Connect MetaMask
+                          </>
+                        )}
                       </motion.button>
                       {walletConnection.connected && !walletConnection.error && (
-                        <div className="mt-4 text-green-600 text-sm">
-                          Connected: {truncateAddress(walletConnection.address)}
+                        <div className="flex items-center justify-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-100 mb-4">
+                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-green-700 text-sm font-medium">
+                            Wallet Connected: {truncateAddress(walletConnection.address)}
+                          </span>
                         </div>
                       )}
                     </motion.div>
@@ -617,12 +687,23 @@ const SignupPage = () => {
                       </motion.button>
                       <motion.button
                         type="submit"
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" }}
+                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79,70,229,0.4)" }}
                         whileTap={{ scale: 0.98 }}
-                        className={`px-6 py-3 ${loading ? 'bg-gray-400' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center`}
-                        disabled={loading}
+                        className={`px-6 py-3 ${loading || !walletConnection.connected ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white rounded-full font-medium hover:opacity-90 transition shadow-md flex items-center`}
+                        disabled={loading || !walletConnection.connected}
                       >
-                        {loading ? 'Submitting...' : 'Submit'}
+                        {loading ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                            />
+                            <span>Creating Account...</span>
+                          </>
+                        ) : (
+                          <span>Create Account</span>
+                        )}
                       </motion.button>
                     </motion.div>
                   </motion.div>

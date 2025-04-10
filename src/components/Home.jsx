@@ -84,14 +84,14 @@ const HomePage = () => {
         ))}
       </div>
 
-      {/* Header */}
+      {/* Header Section */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 shadow-sm w-full border-b border-indigo-100">
-        <div className="max-w-full w-full mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
+        <div className="max-w-7xl w-full mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-1"
           >
             <motion.svg 
               className="w-8 h-8 text-indigo-600" 
@@ -116,20 +116,22 @@ const HomePage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="hidden md:flex space-x-8 items-center"
+            className=" md:flex flex-1 justify-end items-center gap-12"
           >
-            {["Features", "How It Works", "FAQ", "Contact"].map((item, index) => (
-              <motion.a 
-                key={index} 
-                href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} 
-                className="font-medium text-gray-700 hover:text-indigo-600 transition relative group"
-                whileHover={{ y: -2 }}
-              >
-                {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-300 group-hover:w-full" />
-              </motion.a>
-            ))}
-            <div className="flex space-x-3">
+            <div className="flex gap-8">
+              {["Features", "How It Works", "FAQ", "Contact"].map((item, index) => (
+                <motion.a 
+                  key={index} 
+                  href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} 
+                  className="font-medium text-gray-700 hover:text-indigo-600 transition relative group"
+                  whileHover={{ y: -2 }}
+                >
+                  {item}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-300 group-hover:w-full" />
+                </motion.a>
+              ))}
+            </div>
+            <div className="flex gap-4">
               <Link to="/login">
                 <motion.button 
                   whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.2)" }}
@@ -248,7 +250,7 @@ const HomePage = () => {
             <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-transparent bg-clip-text leading-tight">
               Secure Your Medical Data with 
               <span className="block mt-1 relative">
-                <span className="relative z-10 text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-transparent bg-clip-text leading-tight">Blockchain Technology</span>
+                <span className="relative z-10">Blockchain Technology</span>
                 <motion.span
                   className="absolute bottom-1 left-0 h-3 w-full bg-indigo-100 -z-10"
                   initial={{ width: 0 }}
@@ -409,7 +411,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features Section */}
       <section id="features" className="py-16 bg-white w-full relative">
         <div className="container max-w-full mx-auto px-4 md:px-8 lg:px-16">
           <motion.div
@@ -493,7 +495,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* How It Works Section */}
       <section id="how-it-works" className="py-16 bg-gradient-to-br from-indigo-50 to-purple-50 w-full">
         <div className="container max-w-full mx-auto px-4 md:px-8 lg:px-16">
           <motion.div
@@ -514,7 +516,6 @@ const HomePage = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-            {/* Connection Lines */}
             <div className="hidden md:block absolute top-1/4 left-0 w-full h-1 bg-gradient-to-r from-indigo-200 to-purple-200 z-0" />
             
             {[
@@ -679,7 +680,6 @@ const HomePage = () => {
       <section id="contact" className="py-16 relative overflow-hidden w-full">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 -z-10"></div>
         
-        {/* Animated Background Shapes */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
           {[...Array(6)].map((_, i) => (
             <motion.div
@@ -795,11 +795,11 @@ const HomePage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-indigo-900 text-indigo-200 py-12 w-full">
-        <div className="container max-w-full mx-auto px-4 md:px-8 lg:px-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="bg-indigo-900 text-indigo-200 py-12 ">
+        <div className="container mx-auto px-4 md:px-8 lg:px-16">
+          <div className="flex flex-wrap items-center gap-23 justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center  gap-2  mb-4">
                 <motion.svg 
                   className="w-6 h-6 text-indigo-400" 
                   viewBox="0 0 24 24" 
