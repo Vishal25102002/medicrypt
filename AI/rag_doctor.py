@@ -1,40 +1,6 @@
 # # rag_doctor.py
 # import json
 # import os
-# from vector_index import retrieve_relevant_record  # Ensure this function exists
-# from langchain_google_genai import ChatGoogleGenerativeAI
-
-# # Set your Google API key
-# GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDU8mIzLFSiCvGVXqfNwDa4v0FN6NvGBg4")
-
-# def sanitize_data(record, level="partial"):
-#     record = record.copy()
-#     if level == "partial":
-#         record["name"] = "[PATIENT_NAME]"
-#     return record
-
-# def generate_answer_doctor(query, relevant_record):
-#     sanitized_record = sanitize_data(relevant_record, level="partial")
-#     context = f"Patient Medical Record for review:\n{json.dumps(sanitized_record, indent=2)}"
-#     messages = [
-#         {"role": "system", "content": context},
-#         {"role": "user", "content": f"Please provide a detailed analysis for the following query: {query}\nAnswer:"}
-#     ]
-#     llm = ChatGoogleGenerativeAI(api_key=GOOGLE_API_KEY, model="gemini-1.5-flash")
-#     response = llm.invoke(messages)
-#     return response.text().strip()
-
-# if __name__ == "__main__":
-#     query = input("Enter your query (Doctor Dashboard): ").strip()
-#     record = retrieve_relevant_record(query)
-#     answer = generate_answer_doctor(query, record)
-#     print("\nQuery:", query)
-#     print("Answer:", answer)
-# rag_doctor.py
-# rag_doctor.py
-# rag_doctor.py
-
-# rag_doctor.py
 import json
 import os
 from vector_index import retrieve_relevant_record  # Must return a dict for the given query
