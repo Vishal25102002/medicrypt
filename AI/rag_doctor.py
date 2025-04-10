@@ -1,6 +1,3 @@
-# # rag_doctor.py
-# import json
-# import os
 import json
 import os
 from vector_index import retrieve_relevant_record  # Must return a dict for the given query
