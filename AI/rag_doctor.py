@@ -41,7 +41,7 @@ from vector_index import retrieve_relevant_record  # Must return a dict for the 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts.chat import ChatPromptTemplate
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDU8mIzLFSiCvGVXqfNwDa4v0FN6NvGBg4")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 def sanitize_data(record, level="partial"):
     record = record.copy()
