@@ -1,6 +1,7 @@
 # MediCrypt - Decentralized Medical Records Management
 
-![Doctor Dashboard - MediCrypt](https://drive.google.com/file/d/1nxDHQers2jU3A9tHtWRuOxx2WIgiy-Kw/view?usp=drive_link)
+![Doctor Dashboard - MediCrypt](https://drive.google.com/uc?export=view&id=1nxDHQers2jU3A9tHtWRuOxx2WIgiy-Kw)
+
 
 
 ## 🌐 Vision
